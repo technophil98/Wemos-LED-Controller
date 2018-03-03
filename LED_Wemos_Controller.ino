@@ -15,14 +15,14 @@
 #define DATA_PIN 15
 #define CYCLE_START_HUE HSVHue::HUE_RED
 #define CYCLE_TOTAL_TIME 3000 //milliseconds
-
+#define PATTERN_LENGTH 4
 //Definition of global vars
 CRGB leds[NUM_LEDS];
 
 aREST rest = aREST();
 
-const char *ssid = "...";
-const char *password = "...";
+const char *ssid = "Tell my Wi-Fi love her_EXT";
+const char *password = "Paris2016";
 
 // The port to listen for incoming TCP connections
 #define LISTEN_PORT 80
@@ -39,14 +39,14 @@ unsigned long cycleInterval;
 int colorCallback(String);        //Sets general color
 int shutdownLEDsCallback(String); //Shuts down LEDs
 int cycleCallback(String);        //Cycles color of LEDs
-int customConfigCallback(String); //Sets each LED's color according to config
+int patternCallback(String);      //Sets each LED's color according to pattern
 //TODO: Dim and brighten
 
 //Definition of private methods
 void setAllLEDsToColor(long);
 void shutdownLEDs();
 void handleCycle();
-void parseCustomLEDConfig(String, String, long*);
+void parseLEDPatternConfig(String, String, long*);
 
 void setup()
 {
@@ -70,7 +70,7 @@ void setup()
     rest.function("color", colorCallback);
     rest.function("shutdown", shutdownLEDsCallback);
     rest.function("cycle", cycleCallback);
-    rest.function("custom", customConfigCallback);
+    rest.function("pattern", patternCallback);
 
     // Give name & ID to the device (ID should be 6 characters long)
     rest.set_id("1");
@@ -223,15 +223,18 @@ int cycleCallback(String enableCycle)
 }
 
 //Sets each LED's color according to config
-int customConfigCallback(String customConfig)
+int patternCallback(String pattern)
 {
 
-    long ledValues[NUM_LEDS];
-    parseCustomLEDConfig(customConfig, ";", ledValues);
+    long ledValues[PATTERN_LENGTH];
+    parseLEDPatternConfig(pattern, ";", ledValues);
 
-    for (int i = 0; i < NUM_LEDS; i++)
+    for (int i = 0; i < NUM_LEDS; i += PATTERN_LENGTH)
     {
-        leds[i] = constrain(ledValues[i], MIN_COLOR, MAX_COLOR);
+        for (int j = 0; j < PATTERN_LENGTH; j++)
+        {
+            leds[i + j] = constrain(ledValues[j], MIN_COLOR, MAX_COLOR);
+        } 
     }
 
     FastLED.show();
@@ -280,25 +283,21 @@ void handleCycle()
     }
 }
 
-void parseCustomLEDConfig(String config, String delimiter, long* array)
+void parseLEDPatternConfig(String pattern, String delimiter, long* array)
 {
-    char *config_c = new char[config.length()];
-    strcpy(config_c, config.c_str());
+    char *pattern_c = new char[pattern.length()];
+    strcpy(pattern_c, pattern.c_str());
 
     const char *delimiters_c = delimiter.c_str();
 
-    char *splitted = strtok(config_c, delimiters_c);
+    char *splitted = strtok(pattern_c, delimiters_c);
 
     int i = 0;
-    while (splitted != NULL && i < NUM_LEDS)
+    while (splitted != NULL && i < PATTERN_LENGTH)
     {
         array[i] = strtol(splitted, NULL, 16);
 
         splitted = strtok(NULL, delimiters_c);
         i++;
-    }
-
-    for (int j = i; j < NUM_LEDS; ++j) {
-        array[j] = CRGB::Black;
     }
 }
